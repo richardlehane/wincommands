@@ -11,12 +11,33 @@ import (
 )
 
 // install locations
-const (
+var (
 	tikaInstall        = `C:\apache_tika\tika-app-1.5.jar`
 	imageMInstall      = `C:\Program Files\ImageMagick-6.8.8-Q16\convert.exe`
 	libreOfficeInstall = `C:\Program Files\LibreOffice 5\program\soffice`
 	thumbDimensions    = "1024x1024"
+	timeout            = 30 * time.Second
 )
+
+func SetTikaPath(p string) {
+	tikaInstall = p
+}
+
+func SetImageMPath(p string) {
+	imageMInstall = p
+}
+
+func SetLibreOPath(p string) {
+	libreOfficeInstall = p
+}
+
+func SetThumb(x, y int) {
+	thumbDimensions = fmt.Sprintf("%dx%d", x, y)
+}
+
+func SetTimeout(t time.Duration) {
+	timeout = t
+}
 
 // commands
 var (
@@ -95,7 +116,7 @@ func Thumbnail(input, outdir, outname string, overwrite bool) error {
 		return nil
 	}
 	thumbCmd := buildCmd(thumb, input+"[0]", output)
-	timeOutRun(thumbCmd, 30*time.Second)
+	timeOutRun(thumbCmd, timeout)
 	return nil
 }
 
@@ -130,7 +151,7 @@ func WordToPdf(input, outdir string, overwrite bool) (string, error) {
 		return "", err
 	}
 	pdfCmd := buildCmd(pdf, outdir, input)
-	timeOutRun(pdfCmd, 30*time.Second)
+	timeOutRun(pdfCmd, timeout)
 	if _, err := os.Stat(output); err != nil {
 		e := os.RemoveAll(outdir) // failed to create, cleanup
 		if e != nil {
