@@ -20,7 +20,7 @@ var (
 	timeout            = 30 * time.Second
 
 	extract = []string{"java", "-jar", tikaInstall, "-t"}
-	cp      = []string{"cmd", "/c", "copy"}
+	cp      = []string{"cmd", "/c", "xcopy"}
 	thumb   = []string{imageMInstall, "-resize", thumbDimensions, "-flatten", "-quality", "100"}
 	pdf     = []string{libreOfficeInstall, "--headless", "--convert-to", "pdf:writer_pdf_Export", "--outdir"}
 )
