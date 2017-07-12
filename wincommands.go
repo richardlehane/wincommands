@@ -2,6 +2,7 @@ package wincommands
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -20,7 +21,8 @@ var (
 	timeout            = 30 * time.Second
 
 	extract = []string{"java", "-jar", tikaInstall, "-t"}
-	cp      = []string{"cmd", "/c", "xcopy"}
+	xcp     = []string{"cmd", "/c", "xcopy"}
+	robo    = []string{"robocopy"}
 	thumb   = []string{imageMInstall, "-resize", thumbDimensions, "-flatten", "-quality", "100"}
 	pdf     = []string{libreOfficeInstall, "--headless", "--convert-to", "pdf:writer_pdf_Export", "--outdir"}
 )
@@ -84,7 +86,7 @@ func handleOverwrite(overwrite bool, output string) bool {
 }
 
 func MakeDir(dir string) (error, bool) {
-	err := os.MkdirAll(dir, os.ModePerm)
+	err := os.MkdirAll(dir, 0777)
 	if os.IsExist(err) {
 		return nil, true
 	} else if err == nil {
@@ -131,11 +133,25 @@ func FileCopy(input, outdir string, overwrite bool) error {
 	if err, _ := MakeDir(outdir); err != nil {
 		return err
 	}
-	cpCmd := buildCmd(cp, input, outdir)
+	cpCmd := buildCmd(xcp, input, outdir)
 	if err := cpCmd.Run(); err != nil {
-		return fmt.Errorf("Commands: Error copying %s to %s, error message: %v", input, outdir, err)
+		return fmt.Errorf("Commands: Error copying %s to %s with command %s, error message: %v", input, outdir, strings.Join(append([]string{cpCmd.Path}, cpCmd.Args...), " "), err)
 	}
 	return nil
+}
+
+func FileCopyLog(lg io.Writer, input, outdir string, overwrite bool) error {
+	output := filepath.Join(outdir, filepath.Base(input))
+	if handleOverwrite(overwrite, output) {
+		return nil
+	}
+	if err, _ := MakeDir(outdir); err != nil {
+		return err
+	}
+	dir, fn := filepath.Split(input)
+	cpCmd := buildCmd(robo, dir, outdir, "\""+fn+"\"")
+	_, err := fmt.Fprintln(lg, strings.Join(cpCmd.Args, " "))
+	return err
 }
 
 func WordToPdf(input, outdir string, overwrite bool) (string, error) {
