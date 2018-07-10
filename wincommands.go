@@ -21,8 +21,8 @@ var (
 	timeout            = 30 * time.Second
 
 	extract = []string{"java", "-jar", tikaInstall, "-t"}
-	xcp     = []string{"cmd", "/c", "xcopy"}
-	robo    = []string{"robocopy"}
+	xcp     = []string{"xcopy"}
+	rcp     = []string{"robocopy"} //"/COPY:DATSO" - fails over NTFS (security), /COPYALL fails don't have manage user auditing right "/LOG:c:\\Users\\richardl\\Desktop\\log.txt"
 	thumb   = []string{imageMInstall, "-resize", thumbDimensions, "-flatten", "-quality", "100"}
 	pdf     = []string{libreOfficeInstall, "--headless", "--convert-to", "pdf:writer_pdf_Export", "--outdir"}
 )
@@ -125,6 +125,55 @@ func Thumbnail(input, outdir, outname string, overwrite bool) error {
 	return timeOutRun(thumbCmd, timeout)
 }
 
+func quotePath(path string) string {
+	if strings.HasPrefix(path, "\"") {
+		return path
+	}
+	if strings.Contains(path, " ") {
+		return "\"" + path + "\""
+	}
+	return path
+}
+
+func robo(input, outdir string, quote bool) *exec.Cmd {
+	dir, fn := filepath.Split(input)
+	if len(dir) > 0 {
+		dir = dir[:len(dir)-1]
+	}
+	if quote {
+		dir, outdir, fn = quotePath(dir), quotePath(outdir), quotePath(fn)
+	}
+	return buildCmd(rcp, dir, outdir, fn)
+}
+
+func runRobo(input, outdir string) error {
+	cpCmd := robo(input, outdir, false)
+	err := cpCmd.Run()
+	if err == nil {
+		return fmt.Errorf("Commands: Error copying %s to %s with command %s, error message: No errors occurred and no files were copied", input, outdir, strings.Join(append([]string{cpCmd.Path}, cpCmd.Args...), " "))
+	}
+	if err.Error() == "exit status 1" {
+		return nil
+	}
+	return fmt.Errorf("Commands: Error copying %s to %s with command %s, error message: %v", input, outdir, strings.Join(append([]string{cpCmd.Path}, cpCmd.Args...), " "), err)
+}
+
+func xcopy(input, outdir string, quote bool) *exec.Cmd {
+	if quote {
+		input, outdir = quotePath(input), quotePath(outdir)
+	}
+	return buildCmd(xcp, input, outdir)
+}
+
+func runXcopy(input, outdir string) error {
+	cpCmd := xcopy(input, outdir, false)
+	err := cpCmd.Run()
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("Commands: Error copying %s to %s with command %s, error message: %v", input, outdir, strings.Join(append([]string{cpCmd.Path}, cpCmd.Args...), " "), err)
+}
+
 func FileCopy(input, outdir string, overwrite bool) error {
 	output := filepath.Join(outdir, filepath.Base(input))
 	if handleOverwrite(overwrite, output) {
@@ -133,11 +182,7 @@ func FileCopy(input, outdir string, overwrite bool) error {
 	if err, _ := MakeDir(outdir); err != nil {
 		return err
 	}
-	cpCmd := buildCmd(xcp, input, outdir)
-	if err := cpCmd.Run(); err != nil {
-		return fmt.Errorf("Commands: Error copying %s to %s with command %s, error message: %v", input, outdir, strings.Join(append([]string{cpCmd.Path}, cpCmd.Args...), " "), err)
-	}
-	return nil
+	return runRobo(input, outdir)
 }
 
 func FileCopyLog(lg io.Writer, input, outdir string, overwrite bool) error {
@@ -148,8 +193,7 @@ func FileCopyLog(lg io.Writer, input, outdir string, overwrite bool) error {
 	if err, _ := MakeDir(outdir); err != nil {
 		return err
 	}
-	dir, fn := filepath.Split(input)
-	cpCmd := buildCmd(robo, dir, outdir, "\""+fn+"\"")
+	cpCmd := xcopy(input, outdir, true)
 	_, err := fmt.Fprintln(lg, strings.Join(cpCmd.Args, " "))
 	return err
 }
