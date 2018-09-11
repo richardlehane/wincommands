@@ -51,8 +51,8 @@ func SetFFMpegPath(p string) {
 
 // SetTikaPath sets your install directory for Tika
 func SetTikaPath(p string) {
-	ffmpegInstall = p
-	ffmpegInstall = []string{"java", "-jar", tikaInstall, "-t"}
+	tikaInstall = p
+	extract = []string{"java", "-jar", tikaInstall, "-t"}
 }
 
 // SetImageMPath sets your install directory for Image Magick
