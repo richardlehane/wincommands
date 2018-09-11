@@ -31,6 +31,7 @@ var (
 	tikaInstall        = `C:\apache_tika\tika-app-1.5.jar`
 	imageMInstall      = `C:\Program Files\ImageMagick-6.8.8-Q16\convert.exe`
 	libreOfficeInstall = `C:\Program Files\LibreOffice 5\program\soffice`
+	ffmpegInstall      = `C:\ffmpeg\bin\ffmpeg.exe`
 	thumbDimensions    = "1024x1024"
 	timeout            = 30 * time.Second
 
@@ -39,7 +40,14 @@ var (
 	rcp     = []string{"robocopy"} //"/COPY:DATSO" - fails over NTFS (security), /COPYALL fails don't have manage user auditing right "/LOG:c:\\Users\\richardl\\Desktop\\log.txt"
 	thumb   = []string{imageMInstall, "-resize", thumbDimensions, "-flatten", "-quality", "100"}
 	pdf     = []string{libreOfficeInstall, "--headless", "--convert-to", "pdf:writer_pdf_Export", "--outdir"}
+	ffmpeg  = []string{ffmpegInstall}
 )
+
+// SetFFMpegPath sets your install directory for FFMpeg
+func SetFFMpegPath(p string) {
+	ffmpegInstall = p
+	ffmpeg  = []string{ffmpegInstall}
+}
 
 // SetTikaPath sets your install directory for Tika
 func SetTikaPath(p string) {
